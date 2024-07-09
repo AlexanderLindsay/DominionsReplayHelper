@@ -12,3 +12,6 @@ type HelperState =
 module HelperState =
     let init () =
         NotConfigured
+    
+    let setPath path =
+        Configured { SavedGameFolderPath = path }

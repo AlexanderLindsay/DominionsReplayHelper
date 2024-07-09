@@ -14,4 +14,8 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DominionsReplayHelper\DominionsReplayHelper.fsproj" />
+  </ItemGroup>
+
 </Project>
