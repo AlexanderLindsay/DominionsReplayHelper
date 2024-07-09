@@ -3,18 +3,13 @@ namespace DominionsReplayHelper.GUI
 open System
 open System.Diagnostics
 open System.Globalization
-open NStack
+open System.Linq
 open Terminal.Gui
 open DominionsReplayHelper
+open DominionsReplayHelper.GUI.Utils
 
 module MainView =
-    let ustr (x: string) = ustring.Make(x)
-    let fromUstr (x: ustring) =
-        match x with
-        | null -> ""
-        | _ -> x.ToString()
-
-    let getContent viewer state : View=
+    let getContent viewer state : View list =
         match state with
         | NotConfigured -> 
             let pathInput = new TextField(ustr "", X = 0, Y = 0,Width = Dim.op_Implicit 50)
@@ -22,29 +17,44 @@ module MainView =
             setPathButton.add_Clicked (Action (fun () ->
                 pathInput.Text
                 |> fromUstr
+                |> (fun s ->
+                    if s.EndsWith("\\") then s else sprintf "%s\\" s
+                )
                 |> HelperState.setPath
                 |> viewer
             ))
-            let frame = new FrameView (Rect (0, 0, 50, 4), ustr "Dominions Saved Game Folder", [|
+
+            [
                 pathInput;
                 setPathButton;
-            |], Unchecked.defaultof<Border>)
+            ]
+        | Configured cs -> 
+            let pathLabel = new Label (ustr <| sprintf "Dominions Saved Game Folder:%s" cs.SavedGameFolderPath)
+            let gamesList = new ListView(cs.SavedGames.ToList(), Width = Dim.Fill(), Height = Dim.Fill())
+            gamesList.add_SelectedItemChanged (Action<ListViewItemEventArgs> (fun _ -> 
+                gamesList.EnsureSelectedItemVisible()
+            ))
 
-            frame
-        | Configured cs -> new Label (ustr <| sprintf "Dominions Saved Game Folder:%s" cs.SavedGameFolderPath)
+            [
+                pathLabel;
+                gamesList;
+            ]
 
     let rec view state =
         let top = Application.Top
         let margin = 3
         let win = 
-            new Window (ustr "Hello",
+            new Window (ustr "Dominions Replay Helper",
                 X = Pos.At 1,
                 Y = Pos.At 1,
                 Width = Dim.Fill () - Dim.op_Implicit margin,
                 Height = Dim.Fill () - Dim.op_Implicit margin)
         
         let content = getContent view state
-        win.Add content
+        content
+        |> List.iter (fun item ->
+            win.Add item
+        )
 
         top.RemoveAll ()
         top.Add win
