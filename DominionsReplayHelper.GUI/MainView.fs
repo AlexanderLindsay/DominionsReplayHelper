@@ -9,8 +9,13 @@ open DominionsReplayHelper
 open DominionsReplayHelper.GUI.Utils
 
 module MainView =
+    let createGameList games =
+        games
+        |> List.map (fun g -> sprintf "%s (Turn %d)" g.Name g.Turn)
+        |> (fun l -> l.ToList())
+
     let getContent viewer state : View list =
-        match state with
+        match state.State with
         | NotConfigured -> 
             let pathInput = new TextField(ustr "", X = 0, Y = 0,Width = Dim.op_Implicit 50)
             let setPathButton = new Button (ustr "Set Path", X = 0, Y = Pos.Bottom pathInput);
@@ -20,7 +25,7 @@ module MainView =
                 |> (fun s ->
                     if s.EndsWith("\\") then s else sprintf "%s\\" s
                 )
-                |> HelperState.setPath
+                |> HelperState.setPath state
                 |> viewer
             ))
 
@@ -30,7 +35,7 @@ module MainView =
             ]
         | Configured cs -> 
             let pathLabel = new Label (ustr <| sprintf "Dominions Saved Game Folder:%s" cs.SavedGameFolderPath)
-            let gamesList = new ListView(cs.SavedGames.ToList(), Width = Dim.Fill(), Height = Dim.Fill())
+            let gamesList = new ListView(createGameList cs.SavedGames, Width = Dim.Fill(), Height = Dim.Fill())
             gamesList.add_SelectedItemChanged (Action<ListViewItemEventArgs> (fun _ -> 
                 gamesList.EnsureSelectedItemVisible()
             ))
@@ -59,11 +64,11 @@ module MainView =
         top.RemoveAll ()
         top.Add win
 
-    let MainView () =
+    let MainView client =
         if Debugger.IsAttached then
             CultureInfo.DefaultThreadCurrentUICulture <- CultureInfo.GetCultureInfo ("en-US")
 
-        let state = HelperState.init ()
+        let state = HelperState.init client
         
         Application.Init()
         view state
