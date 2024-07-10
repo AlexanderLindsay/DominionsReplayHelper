@@ -60,6 +60,7 @@ module HelperState =
     let listSavedGames url client path =
         Directory.EnumerateDirectories (path)
         |> Seq.map (fun d -> d.Replace(path, ""))
+        |> Seq.filter (fun g -> g <> "newlords") //filter out the folder used to store saved gods
         |> Seq.choose (fun name ->
             getCurrentTurn url client name
             |> Option.map (fun turn ->
