@@ -3,7 +3,6 @@
 open System
 open System.IO
 open System.Net.Http
-open System.Threading.Tasks
 open System.Text.RegularExpressions
 
 type Game = 
@@ -25,6 +24,7 @@ type HelperState =
 type StateWithClient =
     {
         Client: HttpClient
+        Url: string
         State: HelperState
     }
 
@@ -43,8 +43,8 @@ module HelperState =
             toInt g.Value
         )
 
-    let getCurrentTurn (client: HttpClient) game =
-        let url = sprintf "http://ulm.illwinter.com/dom6/server/%s.html" game
+    let getCurrentTurn url (client: HttpClient) game =
+        let url = sprintf "%s%s.html" url game
         let response = 
             async {
                 return! Async.AwaitTask (client.GetStringAsync(url))
@@ -57,11 +57,11 @@ module HelperState =
             turn
         | _ -> None
 
-    let listSavedGames state path =
+    let listSavedGames url client path =
         Directory.EnumerateDirectories (path)
         |> Seq.map (fun d -> d.Replace(path, ""))
         |> Seq.choose (fun name ->
-            getCurrentTurn state.Client name
+            getCurrentTurn url client name
             |> Option.map (fun turn ->
                 { 
                     Name = name
@@ -71,10 +71,24 @@ module HelperState =
         )
         |> List.ofSeq
 
-    let init client =
+    let init config client =
+        let state =
+            match config.SavedGamesPath with
+            | None -> NotConfigured
+            | path ->
+                path
+                |> Option.map (fun p ->
+                    Configured {
+                        SavedGameFolderPath = p
+                        SavedGames = listSavedGames config.DominionsUrl client p
+                    }
+                )
+                |> Option.defaultValue NotConfigured
+
         { 
             Client = client
-            State = NotConfigured
+            Url = config.DominionsUrl
+            State = state
         }
     
     let setPath state path =
@@ -82,6 +96,6 @@ module HelperState =
             State =
                 Configured { 
                     SavedGameFolderPath = path
-                    SavedGames = listSavedGames state path
+                    SavedGames = listSavedGames state.Url state.Client path
                 }
         }

@@ -6,7 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="ConfigFile.fs" />
     <Compile Include="HelperState.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Tommy" Version="3.1.2" />
   </ItemGroup>
 
 </Project>
