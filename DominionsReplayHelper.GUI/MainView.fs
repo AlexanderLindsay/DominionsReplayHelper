@@ -9,6 +9,7 @@ open DominionsReplayHelper
 open DominionsReplayHelper.GUI.Utils
 
 module MainView =
+    open System.Threading.Tasks
     let configurationFilename = "Configuration.toml"
 
     let displayError title message =
@@ -60,22 +61,24 @@ module MainView =
             setPathButton.add_Clicked (Action (fun () ->
                 let progressToken = createProgressBar ()
                 
-                Application.MainLoop.AddTimeout(TimeSpan.FromMilliseconds(1.), fun _ -> 
-                    let state' = 
-                        pathInput.Text
-                        |> fromUstr
-                        |> (fun s ->
-                            if s.EndsWith("\\") then s else sprintf "%s\\" s
-                        )
-                        |> HelperState.setPath state
-                        |> updateConfig
-                
-                    Application.MainLoop.RemoveTimeout (progressToken) |> ignore
+                Application.MainLoop.Invoke(fun () ->
+                    async {
+                        let! state' = 
+                            pathInput.Text
+                            |> fromUstr
+                            |> (fun s ->
+                                if s.EndsWith("\\") then s else sprintf "%s\\" s
+                            )
+                            |> HelperState.setPath state
 
-                    viewer state'
-                    false
+                        let updatedState = updateConfig state'
+                        viewer updatedState
+
+                        Application.MainLoop.RemoveTimeout (progressToken) |> ignore
+                    }
+                    |> Async.StartAsTask
+                    |> ignore
                 )
-                |> ignore
             ))
 
             [
@@ -141,23 +144,20 @@ module MainView =
 
         createWindow () |> ignore
         let progressTimerToken = createProgressBar ()
-        
-        match configResult with
-        | Ok config ->
-            Application.MainLoop.AddTimeout (TimeSpan.FromMilliseconds (5), fun _ -> 
+
+        Application.MainLoop.Invoke(fun () ->
+            async {
+                do! Task.Delay (10) |> Async.AwaitTask
+                match configResult with
+                | Ok config ->
+                    let! state = HelperState.init config client
+                    view state
+                | Error message ->
+                    displayError "Configuration Error" message
                 Application.MainLoop.RemoveTimeout progressTimerToken |> ignore
-                let state = HelperState.init config client
-                view state
-                false
-            )
+            } |> Async.StartAsTask
             |> ignore
-        | Error message ->
-            Application.MainLoop.AddTimeout (TimeSpan.FromMilliseconds (5), fun _ -> 
-                Application.MainLoop.RemoveTimeout progressTimerToken |> ignore
-                displayError "Configuration Error" message
-                false
-            )
-            |> ignore
+        )
 
         Application.Run ()
         Application.Shutdown ()

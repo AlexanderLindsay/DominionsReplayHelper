@@ -29,6 +29,7 @@ type StateWithClient =
     }
 
 module HelperState =
+    open System.Threading.Tasks
     let turnRegex = Regex(@", turn (\d+)", RegexOptions.Compiled)
 
     let toInt (str: string) =
@@ -44,59 +45,83 @@ module HelperState =
         )
 
     let getCurrentTurn url (client: HttpClient) game =
-        let url = sprintf "%s%s.html" url game
-        let response = 
-            async {
-                return! Async.AwaitTask (client.GetStringAsync(url))
-            }
-            |> Async.Catch 
-            |> Async.RunSynchronously
-        match response with
-        | Choice1Of2 html ->
-            let turn = parseTurn html
-            turn
-        | _ -> None
+        async {
+            let url = sprintf "%s%s.html" url game
+            let! response = 
+                client.GetStringAsync(url)
+                |> Async.AwaitTask
+                |> Async.Catch 
+            match response with
+            | Choice1Of2 html ->
+                let turn = parseTurn html
+                return turn
+            | _ -> return None
+        }
 
     let listSavedGames url client path =
-        Directory.EnumerateDirectories (path)
-        |> Seq.map (fun d -> d.Replace(path, ""))
-        |> Seq.filter (fun g -> g <> "newlords") //filter out the folder used to store saved gods
-        |> Seq.choose (fun name ->
-            getCurrentTurn url client name
-            |> Option.map (fun turn ->
-                { 
-                    Name = name
-                    Turn = turn
-                }
-            )
-        )
-        |> List.ofSeq
-
-    let init config client =
-        let state =
-            match config.SavedGamesPath with
-            | None -> NotConfigured
-            | path ->
-                path
-                |> Option.map (fun p ->
-                    Configured {
-                        SavedGameFolderPath = p
-                        SavedGames = listSavedGames config.DominionsUrl client p
+        async {
+            let! games = 
+                Directory.EnumerateDirectories (path)
+                |> Seq.map (fun d -> d.Replace(path, ""))
+                |> Seq.filter (fun g -> g <> "newlords") //filter out the folder used to store saved gods
+                |> Seq.map (fun name ->
+                    async {
+                        let! currentTurnResult = getCurrentTurn url client name
+                        let currentTurn =
+                            currentTurnResult
+                            |> Option.map (fun turn ->
+                                { 
+                                    Name = name
+                                    Turn = turn
+                                }
+                            )
+                        return currentTurn
                     }
                 )
-                |> Option.defaultValue NotConfigured
+                |> Async.Parallel
 
-        { 
-            Client = client
-            Url = config.DominionsUrl
-            State = state
+            let gamesList = 
+                games
+                |> List.ofSeq
+                |> List.choose id
+            
+            return gamesList
+        }
+
+    let init config client =
+        async {
+            let! state = 
+                match config.SavedGamesPath with
+                | None -> 
+                    NotConfigured
+                    |> Task.FromResult
+                    |> Async.AwaitTask
+                | Some path ->
+                    async {
+                        let! savedGames = listSavedGames config.DominionsUrl client path
+                        return Configured {
+                            SavedGameFolderPath = path
+                            SavedGames = savedGames
+                        }
+                    }
+
+            return { 
+                Client = client
+                Url = config.DominionsUrl
+                State = state
+            }
         }
     
     let setPath state path =
-        { state with 
-            State =
-                Configured { 
-                    SavedGameFolderPath = path
-                    SavedGames = listSavedGames state.Url state.Client path
+        async {
+            let! savedGames = listSavedGames state.Url state.Client path
+            let state' = 
+                { state with 
+                    State =
+                        Configured { 
+                            SavedGameFolderPath = path
+                            SavedGames = savedGames
+                        }
                 }
+            return state'
         }
