@@ -29,12 +29,21 @@ module MainView =
         progressTimerToken
 
     let updateConfig state =
+        let (path, games) = 
+            match state.State with
+            | NotConfigured -> None, []
+            | Configured d ->
+                Some d.SavedGameFolderPath, 
+                    d.SavedGames
+                    |> List.map (fun sg -> {
+                        Name = sg.Name
+                        IsMultiplayer = sg.IsMultiplayer
+                    })
         let config = {
             DominionsUrl = state.Url
-            SavedGamesPath = 
-                match state.State with
-                | NotConfigured -> None
-                | Configured d -> Some d.SavedGameFolderPath
+            SavedGamesPath = path
+            Games = games
+
         }
 
         let result = 
@@ -47,8 +56,9 @@ module MainView =
 
         state
 
-    let createGameList games =
+    let createGameList (games: Game list) =
         games
+        |> List.filter (fun g -> g.IsMultiplayer)
         |> List.map (fun g -> sprintf "%s (Turn %d)" g.Name g.Turn)
         |> (fun l -> l.ToList())
 
@@ -151,7 +161,8 @@ module MainView =
                 match configResult with
                 | Ok config ->
                     let! state = HelperState.init config client
-                    view state
+                    let updatedState = updateConfig state
+                    view updatedState
                 | Error message ->
                     displayError "Configuration Error" message
                 Application.MainLoop.RemoveTimeout progressTimerToken |> ignore

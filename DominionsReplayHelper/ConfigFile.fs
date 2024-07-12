@@ -3,9 +3,15 @@ namespace DominionsReplayHelper
 open System.IO
 open Tommy
 
+type GameConfiguration = {
+    Name: string
+    IsMultiplayer: bool
+}
+
 type ConfigData = {
     DominionsUrl: string
     SavedGamesPath: string option
+    Games: GameConfiguration list
 }
 
 module ConfigFile =
@@ -17,15 +23,46 @@ module ConfigFile =
     
     let nodeAsString (node: TomlNode) =
         if node.IsString then Some node.AsString.Value else None
+
+    let nodeAsBoolean (node: TomlNode) =
+        if node.IsBoolean then Some node.AsBoolean.Value else None
+
+    let nodeAsTable (node: TomlNode) =
+        if node.IsTable then Some node.AsTable else None
     
     let getString key (table: TomlTable) =
         getNode key table
         |> Option.bind nodeAsString
 
+    let getBoolean key (table: TomlTable) =
+        getNode key table
+        |> Option.bind nodeAsBoolean
+    
+    let getTableAsSeq key (table: TomlTable) =
+        getNode key table
+        |> Option.bind nodeAsTable
+        |> Option.map (fun t -> t.Children)
+        |> Option.defaultValue Seq.empty
+
     let parseConfig fileStream =
         let table = TOML.Parse(fileStream)
         let url = getString "DominionsUrl" table
         let path = getString "SavedGamesPath" table
+
+        let games = 
+            getTableAsSeq "games" table
+            |> Seq.choose (fun node -> if node.IsTable then Some node.AsTable else None)
+            |> Seq.choose (fun node ->
+                let name = getString "Name" node
+                let isMultiplayer = getBoolean "IsMultiplayer" node
+                Option.map2 (fun name isMultiplayer -> 
+                    {
+                        Name = name;
+                        IsMultiplayer = isMultiplayer;
+                    }
+                ) name isMultiplayer
+            )
+            |> List.ofSeq
 
         match url with
         | None -> Error "Could not parse dominions url from config file. \n Expecting `DominionsUrl = <url>`."
@@ -33,6 +70,7 @@ module ConfigFile =
             {
                 DominionsUrl = u
                 SavedGamesPath = path
+                Games = games
             }
             |> Ok
 
@@ -45,6 +83,19 @@ module ConfigFile =
         | Some path ->
             table.["SavedGamesPath"] <- path
         | None -> ()
+
+        let gamesArray = new TomlArray ()
+        gamesArray.IsTableArray <- true
+        gamesArray.AddRange (
+            config.Games
+            |> List.map (fun g ->
+                let gameTable = new TomlTable ()
+                gameTable.["Name"] <- g.Name
+                gameTable.["IsMultiplayer"] <- g.IsMultiplayer
+                gameTable
+            )
+        )
+        table.["Games"] <- gamesArray
 
         table
 

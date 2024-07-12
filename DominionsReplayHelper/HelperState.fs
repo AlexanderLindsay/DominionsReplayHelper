@@ -9,6 +9,7 @@ type Game =
     {
         Name: string
         Turn: int
+        IsMultiplayer: bool
     }
 
 type ConfiguredHelperState = 
@@ -57,8 +58,20 @@ module HelperState =
                 return turn
             | _ -> return None
         }
+    
+    let createGame name turn isMultiplayer =
+        {
+            Name = name;
+            Turn = turn;
+            IsMultiplayer = isMultiplayer;
+        }
 
-    let listSavedGames url client path =
+    let listSavedGames url (priorGames: GameConfiguration list) client path =
+        let priorGamesMap = 
+            priorGames
+            |> List.map (fun pg -> pg.Name, pg.IsMultiplayer)
+            |> Map.ofList
+
         async {
             let! games = 
                 Directory.EnumerateDirectories (path)
@@ -66,16 +79,33 @@ module HelperState =
                 |> Seq.filter (fun g -> g <> "newlords") //filter out the folder used to store saved gods
                 |> Seq.map (fun name ->
                     async {
-                        let! currentTurnResult = getCurrentTurn url client name
-                        let currentTurn =
-                            currentTurnResult
-                            |> Option.map (fun turn ->
-                                { 
-                                    Name = name
-                                    Turn = turn
-                                }
-                            )
-                        return currentTurn
+                        let isMultiplayer =
+                            priorGamesMap
+                            |> Map.tryFind name
+                        
+                        match isMultiplayer with
+                        | Some im -> 
+                            match im with
+                            | false ->
+                                return createGame name 1 false
+                            | true ->
+                                let! currentTurnResult = getCurrentTurn url client name
+                                let currentTurn =
+                                    currentTurnResult
+                                    |> Option.map (fun turn ->
+                                        createGame name turn true
+                                    )
+                                    |> Option.defaultValue (createGame name 1 false)
+                                return currentTurn
+                        | None ->
+                            let! currentTurnResult = getCurrentTurn url client name
+                            let currentTurn =
+                                currentTurnResult
+                                |> Option.map (fun turn ->
+                                    createGame name turn true
+                                )
+                                |> Option.defaultValue (createGame name 1 false)
+                            return currentTurn
                     }
                 )
                 |> Async.Parallel
@@ -83,7 +113,6 @@ module HelperState =
             let gamesList = 
                 games
                 |> List.ofSeq
-                |> List.choose id
             
             return gamesList
         }
@@ -98,7 +127,7 @@ module HelperState =
                     |> Async.AwaitTask
                 | Some path ->
                     async {
-                        let! savedGames = listSavedGames config.DominionsUrl client path
+                        let! savedGames = listSavedGames config.DominionsUrl config.Games client path
                         return Configured {
                             SavedGameFolderPath = path
                             SavedGames = savedGames
@@ -114,7 +143,7 @@ module HelperState =
     
     let setPath state path =
         async {
-            let! savedGames = listSavedGames state.Url state.Client path
+            let! savedGames = listSavedGames state.Url [] state.Client path
             let state' = 
                 { state with 
                     State =
