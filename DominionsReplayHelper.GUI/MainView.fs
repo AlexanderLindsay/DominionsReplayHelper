@@ -4,12 +4,12 @@ open System
 open System.Diagnostics
 open System.Globalization
 open System.Linq
+open System.Threading.Tasks
 open Terminal.Gui
 open DominionsReplayHelper
 open DominionsReplayHelper.GUI.Utils
 
 module MainView =
-    open System.Threading.Tasks
     let configurationFilename = "Configuration.toml"
 
     let displayError title message =
@@ -42,8 +42,8 @@ module MainView =
         let config = {
             DominionsUrl = state.Url
             SavedGamesPath = path
+            TurnNameFormat = state.TurnNameFormat
             Games = games
-
         }
 
         let result = 
@@ -56,11 +56,25 @@ module MainView =
 
         state
 
-    let createGameList (games: Game list) =
+    let createGamesList (games: Game list) =
         games
         |> List.filter (fun g -> g.IsMultiplayer)
-        |> List.map (fun g -> sprintf "%s (Turn %d)" g.Name g.Turn)
+    
+    let displayGamesList path format (games: Game list) =
+        games
+        |> List.map (fun g ->
+            let turnName = HelperState.formatTurnName format g
+            let turnSaved = HelperState.turnExists path turnName
+            sprintf "%s (Turn %d%s)" g.Name g.Turn (if turnSaved then ", Saved" else "")
+        )
         |> (fun l -> l.ToList())
+
+    let saveGameTurn path format selectedGame =
+        selectedGame
+        |> Option.iter (fun game ->
+            let turnName = HelperState.formatTurnName format game
+            HelperState.copyTurn path game turnName
+        )
 
     let getContent viewer state : View list =
         match state.State with
@@ -98,14 +112,27 @@ module MainView =
             ]
         | Configured cs -> 
             let pathLabel = new Label (ustr <| sprintf "Dominions Saved Game Folder: %s" cs.SavedGameFolderPath, X = 1, Y = 1)
-            let gamesList = new ListView(createGameList cs.SavedGames, Width = Dim.Fill(), Height = Dim.Fill())
+            let games = createGamesList cs.SavedGames
+            let gamesDisplayList = displayGamesList cs.SavedGameFolderPath state.TurnNameFormat games
+            let gamesList = new ListView(
+                gamesDisplayList, Width = Dim.Fill(), Height = Dim.Fill())
             gamesList.add_SelectedItemChanged (Action<ListViewItemEventArgs> (fun _ -> 
                 gamesList.EnsureSelectedItemVisible()
             ))
 
+            let bottomBar = new StatusBar ([|
+                StatusItem(Key.S, ustr "~Shift-S~ Save Turn", fun () -> 
+                    let selectedGame = 
+                        games
+                        |> List.tryItem gamesList.SelectedItem
+                    saveGameTurn cs.SavedGameFolderPath state.TurnNameFormat selectedGame
+                )
+            |])
+
             [
                 pathLabel;
                 gamesList;
+                bottomBar;
             ]
 
     let Quit () =

@@ -1,1 +1,2 @@
 DominionsUrl = "http://ulm.illwinter.com/dom6/server/"
+TurnNameFormat = "%Name%_Turn_%Turn%"

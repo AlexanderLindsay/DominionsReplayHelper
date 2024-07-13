@@ -11,6 +11,7 @@ type GameConfiguration = {
 type ConfigData = {
     DominionsUrl: string
     SavedGamesPath: string option
+    TurnNameFormat: string
     Games: GameConfiguration list
 }
 
@@ -48,6 +49,7 @@ module ConfigFile =
         let table = TOML.Parse(fileStream)
         let url = getString "DominionsUrl" table
         let path = getString "SavedGamesPath" table
+        let turnNameFormat = getString "TurnNameFormat" table
 
         let games = 
             getTableAsSeq "games" table
@@ -64,12 +66,14 @@ module ConfigFile =
             )
             |> List.ofSeq
 
-        match url with
-        | None -> Error "Could not parse dominions url from config file. \n Expecting `DominionsUrl = <url>`."
-        | Some u -> 
+        match (url, turnNameFormat) with
+        | None, _ -> Error "Could not parse dominions url from config file. \n Expecting `DominionsUrl = <url>`."
+        | _, None -> Error "Could not parse turn name format from config file. \n Expecting `TurnNameFormat = <format>`."
+        | Some u, Some f -> 
             {
                 DominionsUrl = u
                 SavedGamesPath = path
+                TurnNameFormat = f
                 Games = games
             }
             |> Ok
@@ -78,24 +82,28 @@ module ConfigFile =
         let table = new TomlTable ()
         
         table.["DominionsUrl"] <- config.DominionsUrl
+        table.["TurnNameFormat"] <- config.TurnNameFormat
 
         match config.SavedGamesPath with
         | Some path ->
             table.["SavedGamesPath"] <- path
         | None -> ()
 
-        let gamesArray = new TomlArray ()
-        gamesArray.IsTableArray <- true
-        gamesArray.AddRange (
-            config.Games
-            |> List.map (fun g ->
-                let gameTable = new TomlTable ()
-                gameTable.["Name"] <- g.Name
-                gameTable.["IsMultiplayer"] <- g.IsMultiplayer
-                gameTable
+        match config.Games with
+        | [] -> ()
+        | gs ->
+            let gamesArray = new TomlArray ()
+            gamesArray.IsTableArray <- true
+            gamesArray.AddRange (
+                gs
+                |> List.map (fun g ->
+                    let gameTable = new TomlTable ()
+                    gameTable.["Name"] <- g.Name
+                    gameTable.["IsMultiplayer"] <- g.IsMultiplayer
+                    gameTable
+                )
             )
-        )
-        table.["Games"] <- gamesArray
+            table.["Games"] <- gamesArray
 
         table
 

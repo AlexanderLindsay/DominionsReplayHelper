@@ -26,6 +26,7 @@ type StateWithClient =
     {
         Client: HttpClient
         Url: string
+        TurnNameFormat: string
         State: HelperState
     }
 
@@ -137,6 +138,7 @@ module HelperState =
             return { 
                 Client = client
                 Url = config.DominionsUrl
+                TurnNameFormat = config.TurnNameFormat
                 State = state
             }
         }
@@ -154,3 +156,29 @@ module HelperState =
                 }
             return state'
         }
+    
+    let formatTurnName (format: string) game =
+        format
+            .Replace("%Name%", game.Name)
+            .Replace("%Turn%", sprintf "%d" game.Turn)
+    
+    let combinePath partOne partTwo =
+        Path.Combine(partOne, partTwo)
+    
+    let turnExists path turnName =
+        let targetPath = combinePath path turnName
+        Directory.Exists(targetPath)
+
+    let copyTurn path game turnName =
+        let targetPath = combinePath path turnName
+        match Directory.Exists(targetPath) with
+        | false -> 
+            let target = Directory.CreateDirectory (targetPath)
+            let sourceFiles = Directory.GetFiles(combinePath path game.Name)
+            sourceFiles
+            |> Seq.iter (fun file ->
+                let filename = Path.GetFileName(file)
+                let targetFile = combinePath target.FullName filename
+                File.Copy(file, targetFile)
+            )
+        | true -> () //turn already exists
