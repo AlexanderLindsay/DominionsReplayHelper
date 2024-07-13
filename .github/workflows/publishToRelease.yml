@@ -22,14 +22,14 @@ jobs:
     - name: Publish
       run: dotnet publish ./DominionsReplayHelper.GUI/ -o ./publish/DominionsReplayHelper/
     - name: Zip
-      run: zip DominionsReplayHelper.zip ./publish/DominionsReplayHelper/* -r
+      run: zip DominionsReplayHelperApp.zip ./publish/DominionsReplayHelper/* -r
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: DominionsReplayHelper
-        path: DominionsReplayHelper.zip
+        path: DominionsReplayHelperApp.zip
     - name: Release
-      run: gh release upload ${{github.event.release.tag_name}} DominionsReplayHelper.zip --latest
+      run: gh release upload ${{github.event.release.tag_name}} DominionsReplayHelperApp.zip
       env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
