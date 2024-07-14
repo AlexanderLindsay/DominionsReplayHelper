@@ -2,11 +2,11 @@ A command line program that helps archive off multiplayer [Dominions 6](https://
 
 <details>
   <summary>How do I get this?</summary>
-  Download the zip file from the latest release, [here](https://github.com//AlexanderLindsay/DominionsReplayHelper/releases/download/latest/DominionsReplayHelperApp.zip).
+  Download the zip file from the latest release, <a href="https://github.com//AlexanderLindsay/DominionsReplayHelper/releases/latest/download/DominionsReplayHelperApp.zip">here</a>.
 </details>
 <details>
   <summary>How do I use this?</summary>
-  After downloading the zip file, run the DominionsReplayHelper.GUI.exe file. A console will open up with the app. If this is the first time running the app, it will ask for the path to the dominions 6 save folder. This is most likely in `AppData/Roaming/Dominions6/savedgames`, but the app expects the full path.
+  After downloading the zip file, run the <code>DominionsReplayHelper.GUI.exe</code> file. A console will open up with the app. If this is the first time running the app, it will ask for the path to the dominions 6 save folder. This is most likely in <code>AppData/Roaming/Dominions6/savedgames</code>, but the app expects the full path.
 </details>
 <details>
   <summary>Why should I use this</summary>
