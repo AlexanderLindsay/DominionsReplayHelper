@@ -7,7 +7,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -22,7 +22,7 @@ jobs:
     - name: Publish
       run: dotnet publish ./DominionsReplayHelper.GUI/ -o ./publish/DominionsReplayHelper/
     - name: Zip
-      run: zip DominionsReplayHelperApp.zip ./publish/DominionsReplayHelper/* -r
+      run: 7z a -tzip DominionsReplayHelperApp.zip ./publish/DominionsReplayHelper/ -r
     - name: Release
       run: gh release upload ${{github.event.release.tag_name}} DominionsReplayHelperApp.zip
       env:
