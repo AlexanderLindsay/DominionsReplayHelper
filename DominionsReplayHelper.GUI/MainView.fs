@@ -174,7 +174,9 @@ module MainView =
         let configResult = 
             ConfigFile.getConfigFile configurationFilename
             |> Result.bind (fun file -> 
-                ConfigFile.parseConfig file
+                let result = ConfigFile.parseConfig file
+                file.Close()
+                result
             )
         
         Application.Init()
@@ -184,7 +186,7 @@ module MainView =
 
         Application.MainLoop.Invoke(fun () ->
             async {
-                do! Task.Delay (10) |> Async.AwaitTask
+                do! Task.Delay (1000) |> Async.AwaitTask
                 match configResult with
                 | Ok config ->
                     let! state = HelperState.init config client

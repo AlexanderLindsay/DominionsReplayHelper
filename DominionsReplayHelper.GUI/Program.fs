@@ -13,7 +13,9 @@ module entry =
             let configResult = 
                 ConfigFile.getConfigFile configurationFilename
                 |> Result.bind (fun file -> 
-                    ConfigFile.parseConfig file
+                    let result = ConfigFile.parseConfig file
+                    file.Close()
+                    result
                 )
             
             match configResult with

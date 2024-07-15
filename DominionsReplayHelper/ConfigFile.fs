@@ -119,6 +119,7 @@ module ConfigFile =
             let file = File.CreateText(filename)
             config.WriteTo(file)
             file.Flush()
+            file.Close()
             Ok true
         with
-            | _ -> Error "Could not write config file"
+            | _ -> Error "Could not write to config file"
