@@ -1,4 +1,4 @@
-A command line program that helps archive off multiplayer [Dominions 6](https://www.illwinter.com/dom6/docs.html) turns so the turns can be viewed later.
+A command line program that helps archive off multiplayer [Dominions 6](https://www.illwinter.com/dom6/docs.html) turns so the turns can be viewed later. it works best with [Windows Terminal](https://apps.microsoft.com/detail/9n0dx20hk701?rtc=1&hl=en-us&gl=US), it gives you mouse support.
 
 <details>
   <summary>How do I get this?</summary>
@@ -6,7 +6,7 @@ A command line program that helps archive off multiplayer [Dominions 6](https://
 </details>
 <details>
   <summary>How do I use this?</summary>
-  After downloading the zip file, run the <code>DominionsReplayHelper.GUI.exe</code> file. A console will open up with the app. If this is the first time running the app, it will ask for the path to the dominions 6 save folder. This is most likely in <code>AppData/Roaming/Dominions6/savedgames</code>, but the app expects the full path.
+  After downloading the zip file, run the <code>DominionsReplayHelper.GUI.exe</code> file. A console will open up with the app. If this is the first time running the app, it will ask for the path to the dominions 6 save folder. This is most likely in <code>AppData/Roaming/Dominions6/savedgames</code>. The game will link to the correct root folder by opening <code>Tools & Manuals</code> in the main menu and then clicking <code>Open User Data Directory</code>
 
   Once the path has been set, the app will display a list of the multiplayer games, the current turn, and if that turn has been saved or not. Highlighting the row and pressing Shift-S or clicking Save the button in the bottom bar will save the current turn.
 </details>
