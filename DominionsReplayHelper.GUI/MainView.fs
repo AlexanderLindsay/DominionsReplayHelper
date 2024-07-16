@@ -126,6 +126,7 @@ module MainView =
                         games
                         |> List.tryItem gamesList.SelectedItem
                     saveGameTurn cs.SavedGameFolderPath state.TurnNameFormat selectedGame
+                    viewer state
                 )
             |])
 
